@@ -1,4 +1,4 @@
-export enum OTActionName {
+export enum JOTActionName {
   NumberAdd = 'NA',
   ListInsert = 'LI',
   ListDelete = 'LD',

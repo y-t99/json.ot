@@ -1,8 +1,8 @@
 import { IJOTPath } from './jot.path';
-import { OTActionName } from './ot.action.name.enum';
+import { JOTActionName } from './jot.action.name.enum';
 
 export default interface IListDeleteAction {
-  n: OTActionName.ListDelete;
+  n: JOTActionName.ListDelete;
   p: IJOTPath;
   ld: any;
 }

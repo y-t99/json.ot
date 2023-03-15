@@ -1,8 +1,8 @@
 import { IJOTPath } from './jot.path';
-import { OTActionName } from './ot.action.name.enum';
+import { JOTActionName } from './jot.action.name.enum';
 
 export default interface INumberAddAction {
-  n: OTActionName.NumberAdd;
+  n: JOTActionName.NumberAdd;
   p: IJOTPath;
   na: number;
 }

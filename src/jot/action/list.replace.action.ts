@@ -1,8 +1,8 @@
 import { IJOTPath } from './jot.path';
-import { OTActionName } from './ot.action.name.enum';
+import { JOTActionName } from './jot.action.name.enum';
 
 export default interface IListReplaceAction {
-  n: OTActionName.ListReplace;
+  n: JOTActionName.ListReplace;
   p: IJOTPath;
   ld: any;
   li: any;

@@ -2,7 +2,11 @@ import { clone, insert, isNotString } from 'util';
 import { ITOTAction, TOTActionName } from './action';
 import IStringDeleteAction from './action/string.delete.action';
 import IStringInsertAction from './action/string.insert.action';
-import { checkValidTotOperation } from './transformation.properties.conditions';
+import {
+  checkValidDeletedString,
+  checkValidTotAction,
+  checkValidTotOperation,
+} from './transformation.properties.conditions';
 
 export function apply(snapshot: string, operation: ITOTAction[]): string {
   if (isNotString(snapshot))
@@ -90,8 +94,125 @@ export function compose(operationA: ITOTAction[], operationB: ITOTAction[]) {
   return mutableOperation;
 }
 
+export function normalize(operation: ITOTAction[] | ITOTAction): ITOTAction[] {
+  return compose([], Array.isArray(operation) ? operation : [operation]);
+}
+
+export function transformPosition(
+  position: number,
+  action: ITOTAction,
+  insertAfter?: boolean
+): number {
+  if (action.n === TOTActionName.StringInsert) {
+    if (action.p < position || (action.p === position && insertAfter)) {
+      return position + action.i.length;
+    }
+    return position;
+  }
+
+  if (position <= action.p) {
+    return position;
+  }
+  if (position <= action.p + action.d.length) {
+    return action.p;
+  }
+  return position - action.d.length;
+}
+
+export function transformCursor(
+  position: number,
+  action: ITOTAction,
+  side: 'left' | 'right'
+): number {
+  const insertAfter = side === 'right';
+  position = transformPosition(position, action, insertAfter);
+  return position;
+}
+
+export function transformAction(
+  context: ITOTAction[],
+  action: ITOTAction,
+  otherAction: ITOTAction,
+  side: 'left' | 'right'
+): ITOTAction[] {
+  checkValidTotAction(action);
+  checkValidTotAction(otherAction);
+
+  if (action.n === TOTActionName.StringInsert) {
+    _append(context, {
+      n: TOTActionName.StringInsert,
+      p: transformPosition(action.p, otherAction, side === 'right'),
+      i: action.i,
+    });
+    return context;
+  }
+
+  if (otherAction.n === TOTActionName.StringInsert) {
+    let remain = '';
+    if (action.p < otherAction.p) {
+      _append(context, {
+        n: TOTActionName.StringDelete,
+        p: action.p,
+        d: action.d.slice(otherAction.p - action.p),
+      });
+      remain = action.d.slice(otherAction.p - action.p);
+    }
+    if (remain !== '') {
+      _append(context, {
+        n: TOTActionName.StringDelete,
+        p: action.p + otherAction.i.length,
+        d: remain,
+      });
+    }
+    return context;
+  }
+
+  if (action.p >= otherAction.p + otherAction.d.length) {
+    _append(context, {
+      n: TOTActionName.StringDelete,
+      p: action.p - otherAction.p,
+      d: action.d,
+    });
+  } else if (action.p + action.d.length <= otherAction.p) {
+    _append(context, action);
+  } else {
+    let deletedString = '';
+
+    if (action.p < otherAction.p) {
+      deletedString += action.d.slice(0, otherAction.p);
+    }
+
+    if (action.p + action.d.length > otherAction.p + otherAction.d.length) {
+      deletedString += action.d.slice(
+        otherAction.p + otherAction.d.length - action.p
+      );
+    }
+
+    checkValidDeletedString(action, otherAction);
+
+    if (deletedString !== '') {
+      const position = transformPosition(action.p, otherAction);
+      _append(context, {
+        n: TOTActionName.StringDelete,
+        p: position,
+        d: deletedString,
+      });
+    }
+  }
+
+  return context;
+}
+
 export function invertAction(action: ITOTAction): ITOTAction {
   return action.n === TOTActionName.StringInsert
     ? { n: TOTActionName.StringDelete, p: action.p, d: action.i }
     : { n: TOTActionName.StringInsert, p: action.p, i: action.d };
+}
+
+export function invertOperation(operation: ITOTAction[]): ITOTAction[] {
+  const mutableOperation = operation.slice().reverse();
+  for (let i = 0; i < mutableOperation.length; i++) {
+    mutableOperation[i] = invertAction(mutableOperation[i]);
+  }
+  return mutableOperation;
 }

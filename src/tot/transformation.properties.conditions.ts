@@ -21,3 +21,23 @@ export function checkValidTotOperation(operation: ITOTAction[]): void {
     checkValidTotAction(operation[i]);
   }
 }
+
+export function checkValidDeletedString(
+  action: IStringDeleteAction,
+  otherAction: IStringDeleteAction
+) {
+  const start = Math.max(action.p, otherAction.p);
+  const end = Math.min(
+    action.p + action.d.length,
+    otherAction.p + otherAction.d.length
+  );
+  const deletingString = action.d.slice(start - action.p, end - action.p);
+  const deletedString = otherAction.d.slice(
+    start - otherAction.p,
+    end - otherAction.p
+  );
+  if (deletingString !== deletedString)
+    throw new Error(
+      'Delete ops delete different text in the same region of the document'
+    );
+}

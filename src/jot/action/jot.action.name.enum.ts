@@ -7,4 +7,7 @@ export enum JOTActionName {
   ObjectInsert = 'OI',
   ObjectDelete = 'OD',
   ObjectReplace = 'OR',
+  SubType = 'ST',
+  TextInsert = 'TI',
+  TextDelete = 'TD',
 }

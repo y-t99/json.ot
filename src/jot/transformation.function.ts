@@ -7,6 +7,11 @@
 import { IJOTAction } from './action';
 import { clone } from 'util';
 
+const subtypes = [];
+export function registerSubtype(subtype: any) {
+  subtypes[subtype.name] = subtype;
+}
+
 export function invertAction(action: IJOTAction): IJOTAction {
   const reversalAction: { [key: string]: any } = { p: action.p };
 

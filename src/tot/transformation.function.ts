@@ -40,7 +40,7 @@ export function apply(snapshot: string, operation: ITOTAction[]): string {
   return snapshot;
 }
 
-function _append(operation: ITOTAction[], action: ITOTAction): void {
+export function append(operation: ITOTAction[], action: ITOTAction): void {
   if (
     (action as IStringInsertAction).i === '' ||
     (action as IStringDeleteAction).d === ''
@@ -88,7 +88,7 @@ export function compose(operationA: ITOTAction[], operationB: ITOTAction[]) {
   const mutableOperation = clone(operationA);
 
   for (let i = 0; i < operationB.length; i++) {
-    _append(mutableOperation, operationB[i]);
+    append(mutableOperation, operationB[i]);
   }
 
   return mutableOperation;
@@ -139,7 +139,7 @@ export function transformAction(
   checkValidTotAction(otherAction);
 
   if (action.n === TOTActionName.StringInsert) {
-    _append(context, {
+    append(context, {
       n: TOTActionName.StringInsert,
       p: transformPosition(action.p, otherAction, side === 'right'),
       i: action.i,
@@ -150,7 +150,7 @@ export function transformAction(
   if (otherAction.n === TOTActionName.StringInsert) {
     let remain = '';
     if (action.p < otherAction.p) {
-      _append(context, {
+      append(context, {
         n: TOTActionName.StringDelete,
         p: action.p,
         d: action.d.slice(otherAction.p - action.p),
@@ -158,7 +158,7 @@ export function transformAction(
       remain = action.d.slice(otherAction.p - action.p);
     }
     if (remain !== '') {
-      _append(context, {
+      append(context, {
         n: TOTActionName.StringDelete,
         p: action.p + otherAction.i.length,
         d: remain,
@@ -168,13 +168,13 @@ export function transformAction(
   }
 
   if (action.p >= otherAction.p + otherAction.d.length) {
-    _append(context, {
+    append(context, {
       n: TOTActionName.StringDelete,
       p: action.p - otherAction.p,
       d: action.d,
     });
   } else if (action.p + action.d.length <= otherAction.p) {
-    _append(context, action);
+    append(context, action);
   } else {
     let deletedString = '';
 
@@ -192,7 +192,7 @@ export function transformAction(
 
     if (deletedString !== '') {
       const position = transformPosition(action.p, otherAction);
-      _append(context, {
+      append(context, {
         n: TOTActionName.StringDelete,
         p: position,
         d: deletedString,
@@ -209,7 +209,7 @@ export function invertAction(action: ITOTAction): ITOTAction {
     : { n: TOTActionName.StringInsert, p: action.p, i: action.d };
 }
 
-export function invertOperation(operation: ITOTAction[]): ITOTAction[] {
+export function invert(operation: ITOTAction[]): ITOTAction[] {
   const mutableOperation = operation.slice().reverse();
   for (let i = 0; i < mutableOperation.length; i++) {
     mutableOperation[i] = invertAction(mutableOperation[i]);

@@ -1,3 +1,6 @@
+import { ITextDeleteAction } from './text.delete.action';
+import { ITextInsertAction } from './text.insert.action';
+import { ISubTypeAction } from './sub.type.action';
 import IListDeleteAction from './list.delete.action';
 import IListInsertAction from './list.insert.action';
 import IListMoveAction from './list.move.action';
@@ -15,4 +18,7 @@ export type IJOTAction =
   | IListMoveAction
   | IObjectInsertAction
   | IObjectDeleteAction
-  | IObjectReplaceAction;
+  | IObjectReplaceAction
+  | ISubTypeAction
+  | ITextInsertAction
+  | ITextDeleteAction;

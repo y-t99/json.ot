@@ -32,7 +32,7 @@ export function transformActionX(
  * @param rightOperation     the right operation under version 2 context
  * @returns the left operation and the right operation both version 3 context
  */
-export function transformX(leftOperation: ITOTAction[], rightOperation: ITOTAction[]): ITOTAction[][] {
+export function transformX(leftOperation: ITOTAction[], rightOperation: ITOTAction[]): [ITOTAction[], ITOTAction[]] {
   checkValidTotOperation(leftOperation);
   checkValidTotOperation(rightOperation);
 
@@ -83,7 +83,7 @@ export function transformX(leftOperation: ITOTAction[], rightOperation: ITOTActi
  * transform operation by the apply operation
  * @param operation               will be transform operation
  * @param otherOperation     the apply operation
- * @param type                      left and right the operation modify content position relative to other operation
+ * @param type                       left and right the operation modify content position relative to other operation
  * @returns the transformed operation
  */
 export function transform(operation: ITOTAction[], otherOperation: ITOTAction[], type: 'left' | 'right'): ITOTAction[]{

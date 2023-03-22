@@ -1,4 +1,4 @@
-import { clone, insert, isNotString } from 'util';
+import { clone, insert } from 'util';
 import { ITOTAction, TOTActionName } from './action';
 import IStringDeleteAction from './action/string.delete.action';
 import IStringInsertAction from './action/string.insert.action';
@@ -9,10 +9,6 @@ import {
 } from './transformation.properties.conditions';
 
 export function apply(snapshot: string, operation: ITOTAction[]): string {
-  if (isNotString(snapshot))
-    throw new Error(
-      'text.ot operations cannot be applied to type: ' + typeof snapshot
-    );
 
   checkValidTotOperation(operation);
 

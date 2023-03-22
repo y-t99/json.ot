@@ -5,12 +5,14 @@
     "moduleResolution": "node",
     "lib": ["esnext"],
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDirs": ["./src", "./test"],
     "strict": true,
     "baseUrl": "./src",
     "paths": {
       "*": ["*"]
     },
     "types": ["jest"]
-  }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }

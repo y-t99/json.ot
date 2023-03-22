@@ -4,17 +4,17 @@ import { checkValidTotOperation } from './transformation.properties.conditions';
 
 /**
  * left: insert & right: insert: contextLeft and contextRight both add one insert action.
- * 
+ *
  * left: insert & right: delete: contextLeft add one insert action; contextRight maybe add one delete action or two delete actions.
- * 
+ *
  * left: delete & right: insert: contextLeft add one delete action or two delete actions; contextRight add one insert action;
- * 
+ *
  * left: delete & right: delete: contextLeft and contextRight both maybe add one delete action or zero action.
- * 
- * @param left          
- * @param right         
- * @param contextLeft   
- * @param contextRight  
+ *
+ * @param left
+ * @param right
+ * @param contextLeft
+ * @param contextRight
  */
 export function transformActionX(
   left: ITOTAction,
@@ -29,10 +29,13 @@ export function transformActionX(
 /**
  * transform left operation and right operation, let them under same context.
  * @param leftOperation       the left operation under version 1 context
- * @param rightOperation     the right operation under version 2 context
+ * @param rightOperation      the right operation under version 2 context
  * @returns the left operation and the right operation both version 3 context
  */
-export function transformX(leftOperation: ITOTAction[], rightOperation: ITOTAction[]): [ITOTAction[], ITOTAction[]] {
+export function transformX(
+  leftOperation: ITOTAction[],
+  rightOperation: ITOTAction[]
+): [ITOTAction[], ITOTAction[]] {
   checkValidTotOperation(leftOperation);
   checkValidTotOperation(rightOperation);
 
@@ -40,20 +43,25 @@ export function transformX(leftOperation: ITOTAction[], rightOperation: ITOTActi
 
   for (const action of rightOperation) {
     let rightAction: ITOTAction | null = action;
-    
+
     const mutableLeftOperation: ITOTAction[] = [];
 
     let i = 0;
 
-    while(i < leftOperation.length) {
+    while (i < leftOperation.length) {
       const nextAction: ITOTAction[] = [];
 
-      transformActionX(leftOperation[i], rightAction, mutableLeftOperation, nextAction);
+      transformActionX(
+        leftOperation[i],
+        rightAction,
+        mutableLeftOperation,
+        nextAction
+      );
       i++;
 
-      if(nextAction.length === 1) {
+      if (nextAction.length === 1) {
         rightAction = nextAction[0];
-      } else if(nextAction.length === 0) {
+      } else if (nextAction.length === 0) {
         for (let j = i; j < leftOperation.length; j++) {
           append(mutableLeftOperation, leftOperation[j]);
         }
@@ -81,24 +89,27 @@ export function transformX(leftOperation: ITOTAction[], rightOperation: ITOTActi
 
 /**
  * transform operation by the apply operation
- * @param operation               will be transform operation
- * @param otherOperation     the apply operation
- * @param type                       left and right the operation modify content position relative to other operation
+ * @param operation           will be transform operation
+ * @param otherOperation      the apply operation
+ * @param type                left and right the operation modify content position relative to other operation
  * @returns the transformed operation
  */
-export function transform(operation: ITOTAction[], otherOperation: ITOTAction[], type: 'left' | 'right'): ITOTAction[]{
+export function transform(
+  operation: ITOTAction[],
+  otherOperation: ITOTAction[],
+  type: 'left' | 'right'
+): ITOTAction[] {
   if (!(type === 'left' || type === 'right'))
     throw new Error("type must be 'left' or 'right'");
 
-  if(otherOperation.length === 0) {
+  if (otherOperation.length === 0) {
     return operation;
   }
 
   if (operation.length === 1 && otherOperation.length === 1)
     return transformAction([], operation[0], otherOperation[0], type);
 
-  if (type === 'left')
-    return transformX(operation, otherOperation)[0];
+  if (type === 'left') return transformX(operation, otherOperation)[0];
 
   return transformX(otherOperation, operation)[1];
 }

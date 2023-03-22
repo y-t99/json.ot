@@ -1,4 +1,4 @@
-import { clone, insert } from 'util';
+import { clone, insert } from 'utils';
 import { ITOTAction, TOTActionName } from './action';
 import IStringDeleteAction from './action/string.delete.action';
 import IStringInsertAction from './action/string.insert.action';
@@ -9,7 +9,6 @@ import {
 } from './transformation.properties.conditions';
 
 export function apply(snapshot: string, operation: ITOTAction[]): string {
-
   checkValidTotOperation(operation);
 
   for (const action of operation) {
@@ -52,7 +51,7 @@ export function append(operation: ITOTAction[], action: ITOTAction): void {
       last.n === TOTActionName.StringInsert &&
       mutableAction.n === TOTActionName.StringInsert &&
       last.p <= mutableAction.p &&
-      last.p + last.i.length > mutableAction.p
+      last.p + last.i.length >= mutableAction.p
     ) {
       operation[operation.length - 1] = {
         n: TOTActionName.StringInsert,
@@ -62,7 +61,7 @@ export function append(operation: ITOTAction[], action: ITOTAction): void {
     } else if (
       last.n === TOTActionName.StringDelete &&
       mutableAction.n === TOTActionName.StringDelete &&
-      last.p > mutableAction.p &&
+      last.p >= mutableAction.p &&
       last.p <= mutableAction.p + mutableAction.d.length
     ) {
       operation[operation.length - 1] = {
@@ -80,7 +79,7 @@ export function compose(operationA: ITOTAction[], operationB: ITOTAction[]) {
   checkValidTotOperation(operationA);
   checkValidTotOperation(operationB);
 
-  const mutableOperation = clone(operationA);
+  const mutableOperation = operationA.slice();
 
   for (const action of operationB) {
     append(mutableOperation, action);
@@ -126,13 +125,13 @@ export function transformCursor(
 
 /**
  * transform action by other action.
- * 
+ *
  * insert action: add a new insert action.
- * 
+ *
  * delete action & insert otherAction: maybe add one delete action or two delete actions.
- * 
+ *
  * delete action & delete otherAction: maybe add one delete action or zero action.
- * 
+ *
  * @param context       actions history
  * @param action        will be transform
  * @param otherAction   apply action

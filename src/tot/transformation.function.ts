@@ -128,6 +128,21 @@ export function transformCursor(
   return position;
 }
 
+/**
+ * transform action by other action.
+ * 
+ * insert action: add a new insert action.
+ * 
+ * delete action & insert otherAction: maybe add one delete action or two delete actions.
+ * 
+ * delete action & delete otherAction: maybe add one delete action or zero action.
+ * 
+ * @param context       actions history
+ * @param action        will be transform
+ * @param otherAction   apply action
+ * @param side          if insert action, insert side
+ * @returns actions history contains new action
+ */
 export function transformAction(
   context: ITOTAction[],
   action: ITOTAction,
@@ -147,7 +162,7 @@ export function transformAction(
   }
 
   if (otherAction.n === TOTActionName.StringInsert) {
-    let remain = '';
+    let remain = action.d;
     if (action.p < otherAction.p) {
       append(context, {
         n: TOTActionName.StringDelete,
@@ -169,7 +184,7 @@ export function transformAction(
   if (action.p >= otherAction.p + otherAction.d.length) {
     append(context, {
       n: TOTActionName.StringDelete,
-      p: action.p - otherAction.p,
+      p: action.p - otherAction.d.length,
       d: action.d,
     });
   } else if (action.p + action.d.length <= otherAction.p) {
@@ -178,7 +193,7 @@ export function transformAction(
     let deletedString = '';
 
     if (action.p < otherAction.p) {
-      deletedString += action.d.slice(0, otherAction.p);
+      deletedString += action.d.slice(0, otherAction.p - action.p);
     }
 
     if (action.p + action.d.length > otherAction.p + otherAction.d.length) {

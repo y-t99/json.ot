@@ -16,8 +16,7 @@ export function apply(snapshot: string, operation: ITOTAction[]): string {
 
   checkValidTotOperation(operation);
 
-  for (let i = 0; i < operation.length; i++) {
-    const action = operation[i];
+  for (const action of operation) {
     if (action.n === TOTActionName.StringInsert) {
       snapshot = insert(snapshot, action.p, action.i);
     } else {
@@ -87,8 +86,8 @@ export function compose(operationA: ITOTAction[], operationB: ITOTAction[]) {
 
   const mutableOperation = clone(operationA);
 
-  for (let i = 0; i < operationB.length; i++) {
-    append(mutableOperation, operationB[i]);
+  for (const action of operationB) {
+    append(mutableOperation, action);
   }
 
   return mutableOperation;

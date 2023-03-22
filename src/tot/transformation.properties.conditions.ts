@@ -17,8 +17,8 @@ export function checkValidTotAction(action: ITOTAction): void {
 }
 
 export function checkValidTotOperation(operation: ITOTAction[]): void {
-  for (let i = 0; i < operation.length; i++) {
-    checkValidTotAction(operation[i]);
+  for (const action of operation) {
+    checkValidTotAction(action);
   }
 }
 

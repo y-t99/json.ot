@@ -1,6 +1,6 @@
 import { TOTActionName } from './tot.action.name.enum';
 
-export default interface IStringInsertAction {
+export interface IStringInsertAction {
   n: TOTActionName.StringInsert;
   p: number;
   i: string;

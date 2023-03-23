@@ -1,7 +1,6 @@
 import { clone, insert } from 'utils';
-import { ITOTAction, TOTActionName } from './action';
-import IStringDeleteAction from './action/string.delete.action';
-import IStringInsertAction from './action/string.insert.action';
+import { ITOTAction, TOTActionName, IStringDeleteAction, IStringInsertAction } from './action';
+
 import {
   checkValidDeletedString,
   checkValidTotAction,

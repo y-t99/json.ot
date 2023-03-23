@@ -1,5 +1,4 @@
-import { ITOTAction } from './action';
-import IStringDeleteAction from './action/string.delete.action';
+import { ITOTAction, IStringDeleteAction } from './action';
 
 export function checkValidTotAction(action: ITOTAction): void {
   if (action.p < 0) throw new Error('position cannot be negative');

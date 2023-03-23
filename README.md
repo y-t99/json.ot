@@ -105,3 +105,45 @@ const transformOperation = tot.transform(
 );
 expect(transformOperation[0].p).toEqual(6);
 ```
+
+#### transformX(operationA, operationB)
+
+When two people collaborate on the same snapshot, they can generate derivative operations for their operations using transformX. The non-linear snapshot applies the derived operations, and the different snapshots converges to the same state: 
+
+```typescript
+const snapshot = 'AF';
+const serverOperation: ITOTAction[] = [
+  {
+    n: TOTActionName.StringInsert,
+    p: 1,
+    i: 'B',
+  },
+  {
+    n: TOTActionName.StringInsert,
+    p: 2,
+    i: 'C',
+  },
+];
+const clientOperation: ITOTAction[] = [
+  {
+    n: TOTActionName.StringInsert,
+    p: 1,
+    i: 'D',
+  },
+  {
+    n: TOTActionName.StringInsert,
+    p: 2,
+    i: 'E',
+  },
+];
+const serverSnapshot = tot.apply(snapshot, serverOperation);
+const clientSnapshot = tot.apply(snapshot, clientOperation);
+const [leftOperation, rightOperation] = tot.transformX(
+  serverOperation,
+  clientOperation,
+);
+const client = tot.apply(clientSnapshot, leftOperation);
+const service = tot.apply(serverSnapshot, rightOperation);
+expect(client).toEqual('ABCDEF');
+expect(client).toEqual(service);
+```

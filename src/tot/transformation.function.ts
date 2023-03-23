@@ -161,7 +161,7 @@ export function transformAction(
       append(context, {
         n: TOTActionName.StringDelete,
         p: action.p,
-        d: action.d.slice(otherAction.p - action.p),
+        d: remain.slice(0, otherAction.p - action.p),
       });
       remain = action.d.slice(otherAction.p - action.p);
     }

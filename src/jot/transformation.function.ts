@@ -344,8 +344,8 @@ export function canOpAffectPath(action: IJOTAction, path: IJOTPath): boolean {
  */
 export function transformAction(operation: IJOTAction[], action: IJOTAction, otherAction: IJOTAction, type: 'left' | 'right'): IJOTAction[] {
   const immutableAction = action;
-  const otherActionCommonPathUnderAction = commonLengthForOps(otherAction, action);
-  const actionCommonPathUnderOtherAction = commonLengthForOps(action, otherAction);
+  const actionIsOtherActionSubPart = commonLengthForOps(otherAction, action);
+  const otherActionIsActionSubPart = commonLengthForOps(action, otherAction);
   let actionPathLength = action.p.length;
   let otherActionPathLength = otherAction.p.length;
 
@@ -359,9 +359,9 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
 
   // to reflect that change for invertibility.
   if (
-    actionCommonPathUnderOtherAction != null &&
+    otherActionIsActionSubPart != null &&
     otherActionPathLength > actionPathLength &&
-    action.p[actionCommonPathUnderOtherAction] == otherAction.p[actionCommonPathUnderOtherAction]
+    action.p[otherActionIsActionSubPart] == otherAction.p[otherActionIsActionSubPart]
   ) {
     if (action.n === JOTActionName.ListDelete || action.n === JOTActionName.ListReplace) {
       const oa = clone(otherAction);
@@ -398,7 +398,7 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
     }
   }
 
-  if (otherActionCommonPathUnderAction != null) {
+  if (actionIsOtherActionSubPart != null) {
     const commonOperand = actionPathLength === otherActionPathLength;
 
     // backward compatibility for old string ops
@@ -416,12 +416,15 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
       if (immutableAction.n === JOTActionName.TextDelete || immutableAction.n === JOTActionName.TextInsert) {
         const path = action.p;
         for (const subTypeAction of subTypeOperation) {
-          append(operation, convertToText({
-            n: JOTActionName.SubType,
-            t: 'tot',
-            p: path.slice(),
-            o: subTypeAction,
-          }));
+          append(
+            operation,
+            convertToText({
+              n: JOTActionName.SubType,
+              t: 'tot',
+              p: path.slice(),
+              o: subTypeAction,
+            })
+          );
         }
       }
 
@@ -430,27 +433,248 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
     // transform based on otherC
     else if (otherAction.n === JOTActionName.NumberAdd) {
       // this case is handled below
-    }
-    else if (otherAction.n === JOTActionName.ListReplace) {
-      // 
-    }
-    else if (otherAction.n === JOTActionName.ListInsert) {
-      //
-    }
-    else if (otherAction.n === JOTActionName.ListDelete) {
-      //
-    }
-    else if (otherAction.n === JOTActionName.ListMove) {
-      //
-    }
-    else if (otherAction.n === JOTActionName.ObjectReplace) {
-      //
-    }
-    else if (otherAction.n === JOTActionName.ObjectInsert) {
-      //
-    }
-    else if (otherAction.n === JOTActionName.ObjectDelete) {
-      //
+    } else if (otherAction.n === JOTActionName.ListReplace) {
+      if (otherAction.p[actionIsOtherActionSubPart] === action.p[actionIsOtherActionSubPart]) {
+        if (!commonOperand) {
+          return operation;
+        } else if (action.n === JOTActionName.ListDelete || action.n === JOTActionName.ListReplace) {
+          // we're trying to delete the same element, -> noop
+          if (action.n === JOTActionName.ListReplace && type === 'left') {
+            // we're both replacing one element with another. only one can survive
+            action = {
+              n: JOTActionName.ListReplace,
+              p: action.p,
+              li: clone(otherAction.li),
+              ld: action.ld,
+            };
+          } else {
+            return operation;
+          }
+        }
+      }
+    } else if (otherAction.n === JOTActionName.ListInsert) {
+      if (
+        action.n === JOTActionName.ListInsert &&
+        commonOperand &&
+        action.p[actionIsOtherActionSubPart] === otherAction.p[actionIsOtherActionSubPart]
+      ) {
+        // in li vs. li, left wins.
+        if (type === 'right') {
+          const path = action.p.slice();
+          (path[actionIsOtherActionSubPart] as number)++;
+          action = {
+            ...action,
+            p: path,
+          };
+        }
+      } else if (otherAction.p[actionIsOtherActionSubPart] <= action.p[actionIsOtherActionSubPart]) {
+        const path = action.p.slice();
+        (path[actionIsOtherActionSubPart] as number)++;
+        action = {
+          ...action,
+          p: path,
+        };
+      }
+
+      if (action.n === JOTActionName.ListMove) {
+        if (commonOperand) {
+          // otherC edits the same list we edit
+          if (otherAction.p[actionIsOtherActionSubPart] <= action.lm) {
+            action = {
+              ...action,
+              lm: action.lm + 1,
+            };
+          }
+        }
+      }
+    } else if (otherAction.n === JOTActionName.ListDelete) {
+      if (action.n === JOTActionName.ListMove) {
+        if (commonOperand) {
+          if (otherAction.p[actionIsOtherActionSubPart] === action.p[actionIsOtherActionSubPart]) {
+            // they deleted the thing we're trying to move
+            return operation;
+          }
+          // otherAction edits the same list we edit
+          const position = otherAction.p[actionIsOtherActionSubPart];
+          const from = action.p[actionIsOtherActionSubPart];
+          const to = action.lm;
+          if (position < to || (position === to && from < to))
+            action = {
+              ...action,
+              lm: action.lm - 1,
+            };
+        }
+      }
+
+      if (otherAction.p[actionIsOtherActionSubPart] < action.p[actionIsOtherActionSubPart]) {
+        const path = action.p.slice();
+        (path[actionIsOtherActionSubPart] as number)--;
+        action = {
+          ...action,
+          p: path,
+        };
+      } else if (otherAction.p[actionIsOtherActionSubPart] === action.p[actionIsOtherActionSubPart]) {
+        if (otherActionPathLength < actionPathLength) {
+          // we're below the deleted element, so -> noop
+          return operation;
+        } else if (action.n === JOTActionName.ListDelete || action.n === JOTActionName.ListReplace) {
+          if (action.n === JOTActionName.ListReplace) {
+            // we're replacing, they're deleting. we become an insert.
+            action = {
+              n: JOTActionName.ListInsert,
+              p: action.p,
+              li: action.li,
+            };
+          } else {
+            // we're trying to delete the same element, -> noop
+            return operation;
+          }
+        }
+      }
+    } else if (otherAction.n === JOTActionName.ListMove) {
+      if (action.n === JOTActionName.ListMove && actionPathLength === otherActionPathLength) {
+        // lm vs lm, here we go!
+        const from = action.p[actionIsOtherActionSubPart];
+        const to = action.lm;
+        const otherFrom = otherAction.p[actionIsOtherActionSubPart];
+        const otherTo = otherAction.lm;
+        if (otherFrom !== otherTo) {
+          // if otherFrom == otherTo, we don't need to change our op.
+
+          // where did my thing go?
+          if (from === otherFrom) {
+            // they moved it! tie break.
+            if (type === 'left') {
+              const path = action.p.slice();
+              path[actionIsOtherActionSubPart] = otherTo;
+              action = {
+                ...action,
+                p: path,
+              };
+              if (from === to)
+                // ugh
+                action.lm = otherTo;
+            } else {
+              return operation;
+            }
+          } else {
+            // they moved around it
+            const path = action.p.slice();
+            action = {
+              ...action,
+              p: path,
+            };
+            if (from > otherFrom) {
+              (action.p[actionIsOtherActionSubPart] as number)--;
+            }
+            if (from > otherTo) {
+              (action.p[actionIsOtherActionSubPart] as number)++;
+            } else if (from === otherTo) {
+              if (otherFrom > otherTo) {
+                (action.p[actionIsOtherActionSubPart] as number)++;
+                if (from === to)
+                  // ugh, again
+                  action.lm++;
+              }
+            }
+
+            // step 2: where am i going to put it?
+            if (to > otherFrom) {
+              action.lm--;
+            } else if (to === otherFrom) {
+              if (to > from) action.lm--;
+            }
+            if (to > otherTo) {
+              action.lm++;
+            } else if (to === otherTo) {
+              // if we're both moving in the same direction, tie break
+              if ((otherTo > otherFrom && to > from) || (otherTo < otherFrom && to < from)) {
+                if (type === 'right') action.lm++;
+              } else {
+                if (to > from) action.lm++;
+                else if (to === otherFrom) action.lm--;
+              }
+            }
+          }
+        }
+      } else if (action.n === JOTActionName.ListInsert && commonOperand) {
+        // li
+        const from = otherAction.p[actionIsOtherActionSubPart];
+        const to = otherAction.lm;
+        const position = action.p[actionIsOtherActionSubPart];
+        const path = action.p.slice();
+        action = {
+          ...action,
+          p: path,
+        };
+        if (position > from) (action.p[actionIsOtherActionSubPart] as number)--;
+        if (position > to) (action.p[actionIsOtherActionSubPart] as number)++;
+      } else {
+        // ld, ld+li, si, sd, na, oi, od, oi+od, any li on an element beneath
+        // the lm
+        //
+        // i.e. things care about where their item is after the move.
+        const from = otherAction.p[actionIsOtherActionSubPart];
+        const to = otherAction.lm;
+        const position = action.p[actionIsOtherActionSubPart];
+        const path = action.p.slice();
+        action = {
+          ...action,
+          p: path,
+        };
+        if (position === from) {
+          action.p[actionIsOtherActionSubPart] = to;
+        } else {
+          if (position > from) (action.p[actionIsOtherActionSubPart] as number)--;
+          if (position > to) (action.p[actionIsOtherActionSubPart] as number)++;
+          else if (position === to && from > to) (action.p[actionIsOtherActionSubPart] as number)++;
+        }
+      }
+    } else if (otherAction.n === JOTActionName.ObjectReplace) {
+      if (action.p[actionIsOtherActionSubPart] === otherAction.p[actionIsOtherActionSubPart]) {
+        if ((action.n === JOTActionName.ObjectInsert || action.n === JOTActionName.ObjectReplace) && commonOperand) {
+          // we inserted where someone else replaced
+          if (type === 'right') {
+            // left wins
+            return operation;
+          }
+          // we win, make our op replace what they inserted
+          action = {
+            n: JOTActionName.ObjectReplace,
+            p: action.p,
+            oi: action.oi,
+            od: otherAction.oi,
+          };
+        } else {
+          // -> noop if the other component is deleting the same object (or any parent)
+          return operation;
+        }
+      }
+    } else if (otherAction.n === JOTActionName.ObjectInsert) {
+      if (
+        (action.n === JOTActionName.ObjectInsert || action.n === JOTActionName.ObjectReplace) &&
+        action.p[actionIsOtherActionSubPart] === otherAction.p[actionIsOtherActionSubPart]
+      ) {
+        // left wins if we try to insert at the same place
+        if (type === 'left') {
+          append(operation, { n: JOTActionName.ObjectDelete, p: action.p, od: otherAction.oi });
+        } else {
+          return operation;
+        }
+      }
+    } else if (otherAction.n === JOTActionName.ObjectDelete) {
+      if (action.p[actionIsOtherActionSubPart] == otherAction.p[actionIsOtherActionSubPart]) {
+        if (!commonOperand) return operation;
+        if (action.n === JOTActionName.ObjectInsert || action.n === JOTActionName.ObjectReplace) {
+          action = {
+            n: JOTActionName.ObjectInsert,
+            p: action.p,
+            oi: action.oi,
+          };
+        } else {
+          return operation;
+        }
+      }
     }
   }
   append(operation, action);

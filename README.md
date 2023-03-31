@@ -147,3 +147,22 @@ const service = tot.apply(serverSnapshot, rightOperation);
 expect(client).toEqual('ABCDEF');
 expect(client).toEqual(service);
 ```
+
+## JSON OT Type
+
+### Action
+
+Operation                              | Description
+---------------------------------------|-------------------------------------
+`{n: 'NA', p: [...string], na: number}`      | the json position `p` number add `na` 
+`{n: 'LI', p: [...string, number], li: object}`      | the json position `...string` list add `li` in index `number` 
+`{n: 'LD', p: [...string, number], ld: string}`      | the json position `...string` list delete `li` in index `number` 
+`{n: 'LR', p: [...string, number], ld: object, li: object}`      | the json position `...string` list replace `ld` with `li` in index `number`
+`{n: 'LM', p: [...string, number], lm: number}`      | the json position `...string` list move index `number` element to index `lm` 
+`{n: 'OI', p: [...string, string], oi: object}`      | the json position `...string` object add {`string`: `oi`} 
+`{n: 'OD', p: [...string, string], od: object}`      | the json position `...string` object delete key `od`
+`{n: 'OR', p: [...string, string], od: object, oi: object}`      | the json position `...string` object replace key `string` value `od` with `oi`
+`{n: 'ST', p: p: [...string], t: string, o: subTypeOperation}`      | use subType `t` execute `o` operation
+`{n: 'SI', p: p: [...string, number], si: string}`      | the json insert the string `si` at offset offset from the position `...string` string 
+`{n: 'SD', p: p: [...string, number], sd: string}`      | the json delete the string `sd` at offset offset from the position `...string` string 
+

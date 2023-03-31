@@ -5,5 +5,5 @@ export interface ISubTypeAction {
   n: JOTActionName.SubType;
   p: IJOTPath;
   t: string;
-  o: any;
+  o: any[];
 }

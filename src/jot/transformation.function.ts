@@ -18,19 +18,50 @@ export function invertAction(action: IJOTAction): IJOTAction {
   const reversalAction: { [key: string]: any } = { p: action.p };
 
   if (action.n === JOTActionName.SubType && subtypes[action.t]) {
+    reversalAction.n = JOTActionName.SubType;
     reversalAction.t = action.t;
     reversalAction.o = subtypes[action.t].invert(action.o);
   }
 
-  if ('si' in action) reversalAction.sd = action.si;
-  if ('sd' in action) reversalAction.si = action.sd;
-  if ('oi' in action) reversalAction.od = action.oi;
-  if ('od' in action) reversalAction.oi = action.od;
-  if ('li' in action) reversalAction.ld = action.li;
-  if ('ld' in action) reversalAction.li = action.ld;
-  if ('na' in action) reversalAction.na = -action.na;
+  if ('si' in action) {
+    reversalAction.n = JOTActionName.TextDelete;
+    reversalAction.sd = action.si;
+  }
+  if ('sd' in action) {
+    reversalAction.n = JOTActionName.TextInsert;
+    reversalAction.si = action.sd;
+  }
+  if ('oi' in action) {
+    reversalAction.n = JOTActionName.ObjectDelete;
+    reversalAction.od = action.oi;
+  }
+  if ('od' in action) {
+    if ('od' in reversalAction) {
+      reversalAction.n = JOTActionName.ObjectReplace;
+    } else {
+      reversalAction.n = JOTActionName.ObjectInsert;
+    }
+    reversalAction.oi = action.od;
+  }
+  if ('li' in action) {
+    reversalAction.n = JOTActionName.ListDelete;
+    reversalAction.ld = action.li;
+  }
+  if ('ld' in action) {
+    if ('ld' in reversalAction) {
+      reversalAction.n = JOTActionName.ListReplace;
+    } else {
+      reversalAction.n = JOTActionName.ListInsert;
+    }
+    reversalAction.li = action.ld;
+  }
+  if ('na' in action) {
+    reversalAction.n = JOTActionName.NumberAdd;
+    reversalAction.na = -action.na;
+  }
 
   if ('lm' in action) {
+    reversalAction.n = JOTActionName.ListMove;
     reversalAction.lm = action.p[action.p.length - 1];
     reversalAction.p = action.p.slice(0, action.p.length - 1).concat([action.lm]);
   }
@@ -80,8 +111,8 @@ function convertFromText(action: ITextInsertAction | ITextDeleteAction): ISubTyp
 
 function convertToText(action: ISubTypeAction): ITextInsertAction | ITextDeleteAction {
   const path = action.p.slice();
-  path.push(action.o.p);
-  if (action.o.n === TOTActionName.StringInsert) {
+  path.push(action.o[0].p);
+  if (action.o[0].n === TOTActionName.StringInsert) {
     return {
       n: JOTActionName.TextInsert,
       p: path,
@@ -91,7 +122,7 @@ function convertToText(action: ISubTypeAction): ITextInsertAction | ITextDeleteA
   return {
     n: JOTActionName.TextDelete,
     p: path,
-    sd: action.o[0].i,
+    sd: action.o[0].d,
   };
 }
 
@@ -132,6 +163,10 @@ function applyOperation(snapshot: IJson | any[], operation: IJOTAction[]): IJson
     // number
     else if (action.n === JOTActionName.NumberAdd) {
       ((currentLevel as IJson)[nextLevelKey] as number) += action.na;
+    }
+    // list replace
+    else if (action.n === JOTActionName.ListReplace) {
+      (currentLevel as IJson)[nextLevelKey] = action.li;
     }
     // list insert
     else if (action.n === JOTActionName.ListInsert) {
@@ -203,7 +238,7 @@ export function append(operation: IJOTAction[], action: IJOTAction): void {
       const subTypeOperation: any[] = subtypes[action.t].compose(last.o, action.o);
 
       if (action.t === 'tot') {
-        for (let index = 0; index < operation.length - 1; index++) {
+        for (let index = 0; index < subTypeOperation.length - 1; index++) {
           action = convertToText({
             n: JOTActionName.SubType,
             t: 'tot',
@@ -216,7 +251,7 @@ export function append(operation: IJOTAction[], action: IJOTAction): void {
           n: JOTActionName.SubType,
           t: 'tot',
           p: last.p,
-          o: operation,
+          o: subTypeOperation,
         });
         operation[lastIndex] = last;
       }

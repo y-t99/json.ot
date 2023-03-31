@@ -112,8 +112,7 @@ export function apply(snapshot: IJson | any[], operation: IJOTAction[]): IJson |
     data: mutableSnapshot,
   };
 
-  for (let i = 0; i < mutableOperation.length; i++) {
-    let action = mutableOperation[i];
+  for (let action of mutableOperation) {
 
     if (action.n === JOTActionName.TextInsert || action.n === JOTActionName.TextDelete) {
       action = convertFromText(action);
@@ -357,7 +356,7 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
     otherActionPathLength++;
   }
 
-  // to reflect that change for invertibility.
+  // to reflect that change for invertibility. ✅
   if (
     otherActionIsActionSubPart != null &&
     otherActionPathLength > actionPathLength &&
@@ -401,7 +400,7 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
   if (actionIsOtherActionSubPart != null) {
     const commonOperand = actionPathLength === otherActionPathLength;
 
-    // backward compatibility for old string ops
+    // backward compatibility for old string ops ✅
     if (
       (action.n === JOTActionName.TextInsert || action.n === JOTActionName.TextDelete) &&
       (otherAction.n === JOTActionName.TextInsert || otherAction.n === JOTActionName.TextDelete)
@@ -409,7 +408,7 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
       action = convertFromText(action);
       otherAction = convertFromText(otherAction);
     }
-
+    // ✅
     if (otherAction.n === JOTActionName.SubType && subtypes[otherAction.t] && action.n === JOTActionName.SubType && action.n === otherAction.t) {
       const subTypeOperation = subtypes[action.t].transform(action.o, otherAction.o, type);
 
@@ -421,7 +420,7 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
             convertToText({
               n: JOTActionName.SubType,
               t: 'tot',
-              p: path.slice(),
+              p: path,
               o: subTypeAction,
             })
           );
@@ -430,12 +429,15 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
 
       return operation;
     }
-    // transform based on otherC
+    // ✅
     else if (otherAction.n === JOTActionName.NumberAdd) {
       // this case is handled below
-    } else if (otherAction.n === JOTActionName.ListReplace) {
+    }
+    // ✅
+    else if (otherAction.n === JOTActionName.ListReplace) {
       if (otherAction.p[actionIsOtherActionSubPart] === action.p[actionIsOtherActionSubPart]) {
         if (!commonOperand) {
+          // noop because element has be remove.
           return operation;
         } else if (action.n === JOTActionName.ListDelete || action.n === JOTActionName.ListReplace) {
           // we're trying to delete the same element, -> noop
@@ -444,15 +446,18 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
             action = {
               n: JOTActionName.ListReplace,
               p: action.p,
-              li: clone(otherAction.li),
-              ld: action.ld,
+              li: action.ld,
+              ld: clone(otherAction.li),
             };
           } else {
+            // noop
             return operation;
           }
         }
       }
-    } else if (otherAction.n === JOTActionName.ListInsert) {
+    }
+    // ✅
+    else if (otherAction.n === JOTActionName.ListInsert) {
       if (
         action.n === JOTActionName.ListInsert &&
         commonOperand &&
@@ -487,14 +492,16 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
           }
         }
       }
-    } else if (otherAction.n === JOTActionName.ListDelete) {
+    } 
+    // ✅
+    else if (otherAction.n === JOTActionName.ListDelete) {
       if (action.n === JOTActionName.ListMove) {
         if (commonOperand) {
           if (otherAction.p[actionIsOtherActionSubPart] === action.p[actionIsOtherActionSubPart]) {
             // they deleted the thing we're trying to move
             return operation;
           }
-          // otherAction edits the same list we edit
+          // otherAction edits the same list we edit fix: bug?
           const position = otherAction.p[actionIsOtherActionSubPart];
           const from = action.p[actionIsOtherActionSubPart];
           const to = action.lm;
@@ -531,8 +538,10 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
           }
         }
       }
-    } else if (otherAction.n === JOTActionName.ListMove) {
-      if (action.n === JOTActionName.ListMove && actionPathLength === otherActionPathLength) {
+    }
+    // ✅
+    else if (otherAction.n === JOTActionName.ListMove) {
+      if (action.n === JOTActionName.ListMove && commonOperand) {
         // lm vs lm, here we go!
         const from = action.p[actionIsOtherActionSubPart];
         const to = action.lm;
@@ -630,7 +639,9 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
           else if (position === to && from > to) (action.p[actionIsOtherActionSubPart] as number)++;
         }
       }
-    } else if (otherAction.n === JOTActionName.ObjectReplace) {
+    }
+    // ✅
+    else if (otherAction.n === JOTActionName.ObjectReplace) {
       if (action.p[actionIsOtherActionSubPart] === otherAction.p[actionIsOtherActionSubPart]) {
         if ((action.n === JOTActionName.ObjectInsert || action.n === JOTActionName.ObjectReplace) && commonOperand) {
           // we inserted where someone else replaced
@@ -650,7 +661,9 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
           return operation;
         }
       }
-    } else if (otherAction.n === JOTActionName.ObjectInsert) {
+    }
+    // ✅
+    else if (otherAction.n === JOTActionName.ObjectInsert) {
       if (
         (action.n === JOTActionName.ObjectInsert || action.n === JOTActionName.ObjectReplace) &&
         action.p[actionIsOtherActionSubPart] === otherAction.p[actionIsOtherActionSubPart]
@@ -662,7 +675,9 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
           return operation;
         }
       }
-    } else if (otherAction.n === JOTActionName.ObjectDelete) {
+    }
+    // ✅
+    else if (otherAction.n === JOTActionName.ObjectDelete) {
       if (action.p[actionIsOtherActionSubPart] == otherAction.p[actionIsOtherActionSubPart]) {
         if (!commonOperand) return operation;
         if (action.n === JOTActionName.ObjectInsert || action.n === JOTActionName.ObjectReplace) {

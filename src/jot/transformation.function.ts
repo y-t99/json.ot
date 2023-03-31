@@ -2,20 +2,17 @@ import { JOTActionName } from './action/jot.action.name.enum';
 import { ITextDeleteAction } from './action/text.delete.action';
 import { ITextInsertAction } from './action/text.insert.action';
 import { IOTType } from 'ot.interface';
-/**
- * Transformation functions are responsible for performing actual transformations on the target operation
- * according to the impact of the reference operation.
- * Transformation functions are dependent on the types and parameters of operations, and data and operation model of the OT system.
- * Transformation functions produce output operations for control algorithms.
- */
 import { IJOTAction, IJOTPath, ISubTypeAction } from './action';
 import { clone } from 'utils';
 import { TOTActionName } from 'tot/action';
+import { tot } from 'tot';
 
 const subtypes: { [_: string]: IOTType<any, any> } = {};
-export function registerSubtype(subtype: IOTType<any, any>) {
+function registerSubtype(subtype: IOTType<any, any>) {
   subtypes[subtype.name] = subtype;
 }
+
+registerSubtype(tot);
 
 export function invertAction(action: IJOTAction): IJOTAction {
   const reversalAction: { [key: string]: any } = { p: action.p };
@@ -98,13 +95,17 @@ function convertToText(action: ISubTypeAction): ITextInsertAction | ITextDeleteA
   };
 }
 
-interface IJson {
+export interface IJson {
   [_: string | number]: JsonValue;
 }
 
-type JsonValue = string | number | IJson | any[];
+export type JsonValue = string | number | IJson | any[];
 
-export function apply(snapshot: IJson | any[], operation: IJOTAction[]): IJson | any[] {
+export function apply(snapshot: IJson, operation: IJOTAction[]): IJson {
+  return applyOperation(snapshot, operation) as IJson;
+}
+
+function applyOperation(snapshot: IJson | any[], operation: IJOTAction[]): IJson | any[] {
   const mutableSnapshot = clone(snapshot);
   const mutableOperation = clone(operation);
 
@@ -113,7 +114,6 @@ export function apply(snapshot: IJson | any[], operation: IJOTAction[]): IJson |
   };
 
   for (let action of mutableOperation) {
-
     if (action.n === JOTActionName.TextInsert || action.n === JOTActionName.TextDelete) {
       action = convertFromText(action);
     }
@@ -370,12 +370,12 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
           ? {
             n: JOTActionName.ListDelete,
             p: action.p,
-            ld: apply(clone(action.ld), [oa]),
+            ld: applyOperation(clone(action.ld), [oa]),
           }
           : {
             n: JOTActionName.ListReplace,
             p: action.p,
-            ld: apply(action.ld, [oa]),
+            ld: applyOperation(action.ld, [oa]),
             li: action.li,
           };
     } else if (action.n === JOTActionName.ObjectDelete || action.n === JOTActionName.ObjectReplace) {
@@ -386,12 +386,12 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
           ? {
             n: JOTActionName.ObjectDelete,
             p: action.p,
-            od: apply(action.od, [oa]),
+            od: applyOperation(action.od, [oa]),
           }
           : {
             n: JOTActionName.ObjectReplace,
             p: action.p,
-            od: apply(action.od, [oa]),
+            od: applyOperation(action.od, [oa]),
             oi: action.oi,
           };
     }
@@ -492,7 +492,7 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
           }
         }
       }
-    } 
+    }
     // ✅
     else if (otherAction.n === JOTActionName.ListDelete) {
       if (action.n === JOTActionName.ListMove) {

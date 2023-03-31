@@ -5,7 +5,7 @@ export interface IOTType<T, R> {
 
   transform: (operation: T[], otherOperation: T[], type: 'left' | 'right') => T[],
 
-  apply: (snapshot: string, operation: T[]) => R,
+  apply: (snapshot: R, operation: T[]) => R,
 
   compose: (operationA: T[], operationB: T[]) => T[],
 

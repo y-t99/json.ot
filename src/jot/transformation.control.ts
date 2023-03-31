@@ -1,16 +1,5 @@
+import { createOTTypeTransformFunction } from 'ot.type.factory';
 import { IJOTAction } from './action';
+import { append, transformAction } from './transformation.function';
 
-export function transformX(
-  leftOp: IJOTAction[],
-  rightOp: IJOTAction[]
-): [IJOTAction[], IJOTAction[]] {
-  return [[], []];
-}
-
-export function transform(
-  op: IJOTAction[],
-  otherOp: IJOTAction[],
-  type: 'left' | 'right'
-): IJOTAction[] {
-  return [];
-}
+export const { transformX, transform } = createOTTypeTransformFunction<IJOTAction>(transformAction, append);

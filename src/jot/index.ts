@@ -1,20 +1,18 @@
+import { IOTType } from 'ot.interface';
 import { IJOTAction } from './action';
+import { transform, transformX } from './transformation.control';
+import { apply, compose, IJson, invert } from './transformation.function';
 
-export interface IJot {
-  apply: (json: any, actions: IJOTAction[]) => void;
+export const jot: IOTType<IJOTAction, IJson> = {
+  name: 'jot',
 
-  transformX: (
-    leftOp: IJOTAction[],
-    rightOp: IJOTAction[]
-  ) => [IJOTAction[], IJOTAction[]];
+  transformX,
 
-  transform: (
-    op: IJOTAction[],
-    otherOp: IJOTAction[],
-    type: 'left' | 'right'
-  ) => IJOTAction[];
+  transform,
 
-  invert: (op: IJOTAction[]) => IJOTAction[];
+  apply,
 
-  compose: (op: IJOTAction[], otherOp: IJOTAction[]) => IJOTAction[];
-}
+  compose,
+
+  invert,
+};

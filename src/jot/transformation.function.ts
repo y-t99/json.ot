@@ -103,7 +103,7 @@ function convertFromText(action: ITextInsertAction | ITextDeleteAction): ISubTyp
       {
         n: TOTActionName.StringDelete,
         p: position,
-        i: action.sd,
+        d: action.sd,
       },
     ],
   };
@@ -183,7 +183,7 @@ function applyOperation(snapshot: IJson | any[], operation: IJOTAction[]): IJson
         // Remove it...
         (currentLevel as any[]).splice(nextLevelKey as number, 1);
         // And insert it back.
-        (currentLevel as any[]).splice(nextLevelKey as number, 0, element);
+        (currentLevel as any[]).splice(action.lm, 0, element);
       }
     }
     // object insert / replace
@@ -370,9 +370,9 @@ export function canOpAffectPath(action: IJOTAction, path: IJOTPath): boolean {
 /**
  * transform action so it applies to a json with other action applied.
  *
- * @param json        json
- * @param action      action
- * @param otherAction the impactful action
+ * @param operation     snapshot
+ * @param action        action
+ * @param otherAction   the impactful action
  * @param type
  * @returns
  */
@@ -444,7 +444,10 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
       otherAction = convertFromText(otherAction);
     }
     // ✅
-    if (otherAction.n === JOTActionName.SubType && subtypes[otherAction.t] && action.n === JOTActionName.SubType && action.n === otherAction.t) {
+    if (otherAction.n === JOTActionName.SubType &&
+      subtypes[otherAction.t] &&
+      action.n === JOTActionName.SubType &&
+      action.t === otherAction.t) {
       const subTypeOperation = subtypes[action.t].transform(action.o, otherAction.o, type);
 
       if (immutableAction.n === JOTActionName.TextDelete || immutableAction.n === JOTActionName.TextInsert) {
@@ -456,7 +459,7 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
               n: JOTActionName.SubType,
               t: 'tot',
               p: path,
-              o: subTypeAction,
+              o: [subTypeAction],
             })
           );
         }
@@ -519,7 +522,7 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
       if (action.n === JOTActionName.ListMove) {
         if (commonOperand) {
           // otherC edits the same list we edit
-          if (otherAction.p[actionIsOtherActionSubPart] <= action.lm) {
+          if ((otherAction.p[actionIsOtherActionSubPart] as number) <= action.lm) {
             action = {
               ...action,
               lm: action.lm + 1,
@@ -537,8 +540,8 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
             return operation;
           }
           // otherAction edits the same list we edit fix: bug?
-          const position = otherAction.p[actionIsOtherActionSubPart];
-          const from = action.p[actionIsOtherActionSubPart];
+          const position = otherAction.p[actionIsOtherActionSubPart] as number;
+          const from = action.p[actionIsOtherActionSubPart] as number;
           const to = action.lm;
           if (position < to || (position === to && from < to))
             action = {
@@ -578,9 +581,9 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
     else if (otherAction.n === JOTActionName.ListMove) {
       if (action.n === JOTActionName.ListMove && commonOperand) {
         // lm vs lm, here we go!
-        const from = action.p[actionIsOtherActionSubPart];
+        const from = action.p[actionIsOtherActionSubPart] as number;
         const to = action.lm;
-        const otherFrom = otherAction.p[actionIsOtherActionSubPart];
+        const otherFrom = otherAction.p[actionIsOtherActionSubPart] as number;
         const otherTo = otherAction.lm;
         if (otherFrom !== otherTo) {
           // if otherFrom == otherTo, we don't need to change our op.
@@ -643,9 +646,9 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
         }
       } else if (action.n === JOTActionName.ListInsert && commonOperand) {
         // li
-        const from = otherAction.p[actionIsOtherActionSubPart];
+        const from = otherAction.p[actionIsOtherActionSubPart] as number;
         const to = otherAction.lm;
-        const position = action.p[actionIsOtherActionSubPart];
+        const position = action.p[actionIsOtherActionSubPart] as number;
         const path = action.p.slice();
         action = {
           ...action,
@@ -658,9 +661,9 @@ export function transformAction(operation: IJOTAction[], action: IJOTAction, oth
         // the lm
         //
         // i.e. things care about where their item is after the move.
-        const from = otherAction.p[actionIsOtherActionSubPart];
+        const from = otherAction.p[actionIsOtherActionSubPart] as number;
         const to = otherAction.lm;
-        const position = action.p[actionIsOtherActionSubPart];
+        const position = action.p[actionIsOtherActionSubPart] as number;
         const path = action.p.slice();
         action = {
           ...action,

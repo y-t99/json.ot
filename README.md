@@ -154,15 +154,112 @@ expect(client).toEqual(service);
 
 Operation                              | Description
 ---------------------------------------|-------------------------------------
-`{n: 'NA', p: [...string], na: number}`      | the json position `p` number add `na` 
-`{n: 'LI', p: [...string, number], li: object}`      | the json position `...string` list add `li` in index `number` 
-`{n: 'LD', p: [...string, number], ld: string}`      | the json position `...string` list delete `li` in index `number` 
-`{n: 'LR', p: [...string, number], ld: object, li: object}`      | the json position `...string` list replace `ld` with `li` in index `number`
-`{n: 'LM', p: [...string, number], lm: number}`      | the json position `...string` list move index `number` element to index `lm` 
-`{n: 'OI', p: [...string, string], oi: object}`      | the json position `...string` object add {`string`: `oi`} 
-`{n: 'OD', p: [...string, string], od: object}`      | the json position `...string` object delete key `od`
-`{n: 'OR', p: [...string, string], od: object, oi: object}`      | the json position `...string` object replace key `string` value `od` with `oi`
-`{n: 'ST', p: p: [...string], t: string, o: subTypeOperation}`      | use subType `t` execute `o` operation
-`{n: 'SI', p: p: [...string, number], si: string}`      | the json insert the string `si` at offset offset from the position `...string` string 
-`{n: 'SD', p: p: [...string, number], sd: string}`      | the json delete the string `sd` at offset offset from the position `...string` string 
+`{n: 'NA', p: [path], na: x}`      | adds `x` to the number at `[path]`.
+`{n: 'LI', p: [path, idx], li: obj}`      | inserts the object `obj` before the item at `idx` in the list at `[path]`.
+`{n: 'LD', p: [.path, idx], ld: obj}`      | deletes the object `obj` from the index `idx` in the list at `[path]`.
+`{n: 'LR', p:[path,idx], ld:before, li:after}`      | replaces the object `before` at the index `idx` in the list at `[path]` with the object `after`.
+`{n: 'LM', p:[path,idx1], lm:idx2}`      | moves the object at `idx1` such that the object will be at index `idx2` in the list at `[path]`. 
+`{n: 'OI', p:[path,key], oi:obj}`      | inserts the object `obj `into the object at `[path]` with key `key`.
+`{n: 'OD', p:[path,key], od:obj}`      | deletes the object `obj` with key `key` from the object at `[path]`.
+`{n: 'OR', p:[path,key], od:before, oi:after}`      | replaces the object `before` with the object `after` at key `key` in the object at `[path]`.
+`{n: 'ST', p: [path], t: subtype, o: subtypeOp}`      | applies the subtype op `o` of type `t` to the object at `[path]`
+`{n: 'SI', p:[path,offset], si:s}`      | inserts the string `s` at offset `offset` into the string at `[path]` (uses subtypes internally).
+`{n: 'SD', p:[path,offset], sd:s}`      | deletes the string `s`at offset `offset` from the string at `[path]` (uses subtypes internally).
 
+### Scenario
+
+#### string insert and string delete
+```typescript
+const snapshot = {
+  cell: {
+    text: 'abc',
+  },
+};
+const stringInsertOperation: IJOTAction = {
+  n: JOTActionName.TextInsert,
+  p: ['cell', 'text', 3],
+  si: 'd',
+};
+const stringDeleteOperation: IJOTAction = {
+  n: JOTActionName.TextDelete,
+  p: ['cell', 'text', 0],
+  sd: 'a',
+};
+const versionA = jot.apply(snapshot, [stringInsertOperation]);
+const versionB = jot.apply(versionA, [stringDeleteOperation]);
+expect((versionB.cell as IJson).text).toEqual('bcd');
+```
+
+#### insert/delete/move/replace element into/ /from/ list
+
+```typescript
+const snapshot = {
+  cell: {
+    list: [1, 2, 3],
+  },
+};
+const listInsert: IJOTAction = {
+  n: JOTActionName.ListInsert,
+  p: ['cell', 'list', 0],
+  li: 0,
+};
+const versionA = jot.apply(snapshot, [listInsert]);
+expect((versionA.cell as IJson).list).toEqual([0, 1, 2, 3]);
+const listDelete: IJOTAction = {
+  n: JOTActionName.ListDelete,
+  p: ['cell', 'list', 3],
+  ld: 3,
+};
+const versionB = jot.apply(versionA, [listDelete]);
+expect((versionB.cell as IJson).list).toEqual([0, 1, 2]);
+const listMove: IJOTAction = {
+  n: JOTActionName.ListMove,
+  p: ['cell', 'list', 0],
+  lm: 2,
+};
+const versionC = jot.apply(versionB, [listMove]);
+expect((versionC.cell as IJson).list).toEqual([1, 2, 0]);
+const listReplace: IJOTAction = {
+  n: JOTActionName.ListReplace,
+  p: ['cell', 'list', 2],
+  ld: 0,
+  li: 3,
+};
+const versionD = jot.apply(versionC, [listReplace]);
+expect((versionD.cell as IJson).list).toEqual([1, 2, 3]);
+```
+
+### insert/delete/replace object
+
+```typescript
+const snapshot = {
+  row: {
+    cell1: 'text',
+    cell2: 'text',
+  }
+};
+const objectInsert: IJOTAction = {
+  n: JOTActionName.ObjectInsert,
+  p: ['row', 'cell0'],
+  oi: 'text',
+}
+const versionA = jot.apply(snapshot, [objectInsert]);
+expect((versionA.row as IJson).cell0).toEqual('text');
+const objectDelete: IJOTAction = {
+  n: JOTActionName.ObjectDelete,
+  p: ['row', 'cell2'],
+  od: 'text',
+};
+const versionB = jot.apply(versionA, [objectDelete]);
+expect((versionB.row as IJson).cell2).toBeUndefined();
+const objectReplace: IJOTAction = {
+  n: JOTActionName.ObjectReplace,
+  p: ['row', 'cell1'],
+  od: 'text',
+  oi: {
+    text: '1',
+  },
+};
+const versionC = jot.apply(versionA, [objectReplace]);
+expect((versionC.row as IJson).cell1).toEqual({text: '1'});
+```

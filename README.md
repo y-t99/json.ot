@@ -229,7 +229,7 @@ const versionD = jot.apply(versionC, [listReplace]);
 expect((versionD.cell as IJson).list).toEqual([1, 2, 3]);
 ```
 
-### insert/delete/replace object
+#### insert/delete/replace object
 
 ```typescript
 const snapshot = {
